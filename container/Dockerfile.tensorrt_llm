@@ -14,8 +14,9 @@
 # limitations under the License.
 
 ARG BASE_IMAGE="nvcr.io/nvidia/pytorch"
-ARG BASE_IMAGE_TAG="25.03-py3"
+ARG BASE_IMAGE_TAG="25.04-py3"
 ARG RELEASE_BUILD
+ARG GENAI_PERF_VERSION=0.0.13
 
 # Define general architecture ARGs for supporting both x86 and aarch64 builds.
 #   ARCH: Used for package suffixes (e.g., amd64, arm64)
@@ -145,7 +146,11 @@ COPY --from=trtllm_wheel . /trtllm_wheel/
 # TODO: Currently, ABI compatibility issues with TRTLLM wheel and NGC PyTorch prevent us
 # from using the TRTLLM wheel in a uv venv. Once the issues are resolved, we can
 # use uv to install TensorRT-LLM wheel within the uv venv.
+# Note: TensorRT needs to be uninstalled before installing the TRTLLM wheel
+# because there might be mismatched versions of TensorRT between the NGC PyTorch
+# and the TRTLLM wheel.
 RUN [ -f /etc/pip/constraint.txt ] && : > /etc/pip/constraint.txt || true && \
+    pip uninstall -y tensorrt && \
     if [ "$HAS_TRTLLM_CONTEXT" = "1" ]; then \
         # Install from local wheel directory in build context
         WHEEL_FILE=$(find /trtllm_wheel -name "*.whl" | head -n 1); \
@@ -162,10 +167,11 @@ RUN [ -f /etc/pip/constraint.txt ] && : > /etc/pip/constraint.txt || true && \
          "${TENSORRTLLM_PIP_WHEEL}" ; \
     fi
 
+ARG GENAI_PERF_VERSION
+
 # Install genai-perf for benchmarking
-# TODO: Move to published pypi tags
-ARG GENAI_PERF_TAG="e67e853413a07a778dd78a55e299be7fba9c9c24"
-RUN pip install "git+https://github.com/triton-inference-server/perf_analyzer.git@${GENAI_PERF_TAG}#subdirectory=genai-perf"
+
+RUN uv pip install genai-perf==$GENAI_PERF_VERSION
 
 # Install test dependencies
 RUN --mount=type=bind,source=./container/deps/requirements.test.txt,target=/tmp/requirements.txt \
@@ -194,7 +200,7 @@ RUN apt-get update && \
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
-    RUST_VERSION=1.86.0
+    RUST_VERSION=1.87.0
 
 # Define Rust target based on ARCH_ALT ARG
 ARG RUSTARCH=${ARCH_ALT}-unknown-linux-gnu
@@ -273,7 +279,7 @@ COPY launch /workspace/launch
 COPY deploy/sdk /workspace/deploy/sdk
 
 # Build Rust crate binaries packaged with the wheel
-RUN cargo build --release --locked --features mistralrs,python \
+RUN cargo build --release --locked \
     -p dynamo-run \
     -p llmctl \
     # Multiple http named crates are present in dependencies, need to specify the path

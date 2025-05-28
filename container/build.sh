@@ -49,7 +49,7 @@ PYTHON_PACKAGE_VERSION=${current_tag:-$latest_tag.dev+$commit_id}
 # dependencies are specified in the /container/deps folder and
 # installed within framework specific sections of the Dockerfile.
 
-declare -A FRAMEWORKS=(["VLLM"]=1 ["TENSORRTLLM"]=2 ["NONE"]=3)
+declare -A FRAMEWORKS=(["VLLM"]=1 ["TENSORRTLLM"]=2 ["NONE"]=3, ["SGLANG"]=4)
 DEFAULT_FRAMEWORK=VLLM
 
 SOURCE_DIR=$(dirname "$(readlink -f "$0")")
@@ -58,7 +58,7 @@ BUILD_CONTEXT=$(dirname "$(readlink -f "$SOURCE_DIR")")
 
 # Base Images
 TENSORRTLLM_BASE_IMAGE=nvcr.io/nvidia/pytorch
-TENSORRTLLM_BASE_IMAGE_TAG=25.03-py3
+TENSORRTLLM_BASE_IMAGE_TAG=25.04-py3
 
 # Important Note: Because of ABI compatibility issues between TensorRT-LLM and NGC PyTorch,
 # we need to build the TensorRT-LLM wheel from source.
@@ -88,7 +88,7 @@ TENSORRTLLM_PIP_WHEEL_DIR="/tmp/trtllm_wheel/"
 # TensorRT-LLM commit to use for building the trtllm wheel if not provided.
 # Important Note: This commit is not used in our CI pipeline. See the CI
 # variables to learn how to run a pipeline with a specific commit.
-TRTLLM_COMMIT=83f37614ef735d251281136c3c05b1fecf8ef68b
+TRTLLM_COMMIT=290649b6aaed5f233b0a0adf50edc1347f8d2b14
 
 # TensorRT-LLM PyPI index URL
 TENSORRTLLM_INDEX_URL="https://pypi.python.org/simple"
@@ -105,6 +105,9 @@ VLLM_BASE_IMAGE_TAG="25.01-cuda12.8-devel-ubuntu24.04"
 
 NONE_BASE_IMAGE="ubuntu"
 NONE_BASE_IMAGE_TAG="24.04"
+
+SGLANG_BASE_IMAGE="nvcr.io/nvidia/cuda-dl-base"
+SGLANG_BASE_IMAGE_TAG="25.01-cuda12.8-devel-ubuntu24.04"
 
 NIXL_COMMIT=78695c2900cd7fff506764377386592dfc98e87e
 NIXL_REPO=ai-dynamo/nixl.git
@@ -370,6 +373,8 @@ elif [[ $FRAMEWORK == "TENSORRTLLM" ]]; then
     DOCKERFILE=${SOURCE_DIR}/Dockerfile.tensorrt_llm
 elif [[ $FRAMEWORK == "NONE" ]]; then
     DOCKERFILE=${SOURCE_DIR}/Dockerfile.none
+elif [[ $FRAMEWORK == "SGLANG" ]]; then
+    DOCKERFILE=${SOURCE_DIR}/Dockerfile.sglang
 fi
 
 NIXL_DIR="/tmp/nixl/nixl_src"
