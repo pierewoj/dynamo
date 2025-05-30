@@ -75,12 +75,15 @@ RUN apt-get update -y && \
 WORKDIR /workspace
 
 ### UCX EFA Setup ###
+RUN curl -O https://efa-installer.amazonaws.com/aws-efa-installer-1.41.0.tar.gz && \
+    tar -xf aws-efa-installer-1.41.0.tar.gz && cd aws-efa-installer && \
+    ./efa_installer.sh -y --skip-kmod -g --no-verify
 RUN rm -rf /opt/hpcx/ucx
 RUN rm -rf /usr/local/ucx
 RUN cd /usr/local/src && \
-    git clone https://github.com/openucx/ucx.git && \
+    git clone https://github.com/tvegas1/ucx.git && \
     cd ucx &&                   \
-    git checkout v1.19.x &&     \
+    git checkout b138bb1d5096dca6e912b15e6bcadd9c47e95e9f &&     \
     ./autogen.sh && ./configure \
     --prefix=/usr/local/ucx     \
     --enable-shared             \
